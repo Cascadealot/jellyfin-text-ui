@@ -6,8 +6,9 @@ This file provides context for Claude Code when working on the JTX project.
 
 ## Project Overview
 
-**JTX (Jellyfin Text Browser)** is a single-page, text-based movie browser for Jellyfin.
-It presents a movie library as a sortable, filterable table with no frameworks or build steps.
+**JTX (Jellyfin Text Browser)** is a single-page, text-based media browser for Jellyfin.
+It presents movies and TV shows as sortable, filterable tables with no frameworks or build steps.
+Tabbed interface (Movies | TV Shows), virtual scrolling for 5K+ item libraries.
 
 - **Repo:** https://github.com/Cascadealot/jellyfin-text-ui
 - **Live:** http://192.168.1.183:8080 (nginx on Unraid NAS)
@@ -29,7 +30,7 @@ Browser (single HTML file)
 | File | Purpose |
 |------|---------|
 | `src/index.html` | The complete single-page application |
-| `src/jtx-core.js` | Extracted logic (parseMovie, sort, filter) shared with tests |
+| `src/jtx-core.js` | Extracted logic (parseMovie, parseSeries, sort, filter, virtualScroll) shared with tests |
 | `src/synopses.json` | AI-generated movie blurbs (keyed by movie ID) |
 | `scripts/generate-synopses.js` | Script to generate blurbs via Claude API |
 | `mocks/jellyfin-response.json` | Sample API data for offline testing |
@@ -39,6 +40,7 @@ Browser (single HTML file)
 - **Jellyfin API key:** `b62806a76e91466fa5964648d545a446`
 - **Usage:** Append `?api_key=<key>` to any Jellyfin REST endpoint
 - **Movie items:** `GET /Items?IncludeItemTypes=Movie&Recursive=true&Fields=...&api_key=...`
+- **TV series:** `GET /Items?IncludeItemTypes=Series&Recursive=true&Fields=Overview,Genres,People,Studios,CommunityRating,CriticRating,OfficialRating,ProductionYear,Status,ChildCount,RecursiveItemCount&api_key=...`
 - **Poster images:** `GET /Items/{id}/Images/Primary?maxHeight=60&quality=80&api_key=...`
 
 ## Infrastructure

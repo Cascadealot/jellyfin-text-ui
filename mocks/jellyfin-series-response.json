@@ -1,0 +1,59 @@
+{
+  "Items": [
+    {
+      "Name": "Foundation",
+      "Id": "ser001",
+      "ProductionYear": 2021,
+      "CommunityRating": 7.4,
+      "CriticRating": 72,
+      "OfficialRating": "TV-14",
+      "Overview": "A complex saga of humans scattered on planets throughout the galaxy all living under the rule of the Galactic Empire.",
+      "Genres": ["Science Fiction", "Drama"],
+      "People": [
+        {"Name": "Jared Harris", "Type": "Actor"},
+        {"Name": "Lee Pace", "Type": "Actor"},
+        {"Name": "Lou Llobell", "Type": "Actor"}
+      ],
+      "Studios": [{"Name": "Apple TV+", "Id": "st1"}],
+      "Status": "Continuing",
+      "ChildCount": 2,
+      "RecursiveItemCount": 20
+    },
+    {
+      "Name": "Chernobyl",
+      "Id": "ser002",
+      "ProductionYear": 2019,
+      "CommunityRating": 9.4,
+      "CriticRating": 96,
+      "OfficialRating": "TV-MA",
+      "Overview": "In April 1986, an explosion at the Chernobyl nuclear power plant in the Union of Soviet Socialist Republics becomes one of the world's worst man-made catastrophes.",
+      "Genres": ["Drama", "History"],
+      "People": [
+        {"Name": "Jared Harris", "Type": "Actor"},
+        {"Name": "Stellan Skarsgard", "Type": "Actor"},
+        {"Name": "Emily Watson", "Type": "Actor"}
+      ],
+      "Studios": [{"Name": "HBO", "Id": "st2"}],
+      "Status": "Ended",
+      "ChildCount": 1,
+      "RecursiveItemCount": 5
+    },
+    {
+      "Name": "No Metadata Series",
+      "Id": "ser003",
+      "ProductionYear": null,
+      "CommunityRating": null,
+      "CriticRating": null,
+      "OfficialRating": null,
+      "Overview": null,
+      "Genres": [],
+      "People": [],
+      "Studios": [],
+      "Status": null,
+      "ChildCount": null,
+      "RecursiveItemCount": null
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

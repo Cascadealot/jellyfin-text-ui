@@ -99,12 +99,45 @@ body {
 
 .filter-group select { cursor: pointer; }
 .filter-group select option { background: var(--input-bg); }
+.filter-group.hidden { display: none; }
 
-/* Table */
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab {
+  padding: 8px 24px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.tab:hover { color: var(--text-bright); }
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Table with virtual scrolling */
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  height: calc(100vh - 210px);
+  min-height: 300px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 0 0 4px 4px;
+  border-top: none;
 }
 
 table {
@@ -113,7 +146,7 @@ table {
   table-layout: fixed;
 }
 
-/* Column widths */
+/* Movie column widths */
 col.c-thumb    { width: 50px; }
 col.c-title    { width: 26%; }
 col.c-year     { width: 6%; }
@@ -125,6 +158,12 @@ col.c-res      { width: 7%; }
 col.c-audio    { width: 7%; }
 col.c-codec    { width: 7%; }
 col.c-size     { width: 7%; }
+
+/* TV Show column widths */
+col.c-seasons  { width: 7%; }
+col.c-episodes { width: 8%; }
+col.c-status   { width: 8%; }
+col.c-studio   { width: 14%; }
 
 /* Thumbnail */
 td.thumb-cell {
@@ -297,25 +336,31 @@ thead th.sort-desc {
   color: var(--sort-active);
 }
 
-thead th.sort-asc::after { content: " ▲"; font-size: 9px; }
-thead th.sort-desc::after { content: " ▼"; font-size: 9px; }
+thead th.sort-asc::after { content: " \u25B2"; font-size: 9px; }
+thead th.sort-desc::after { content: " \u25BC"; font-size: 9px; }
 
-tbody tr {
+/* Fixed row height for virtual scrolling */
+tbody tr:not(.detail-row):not(.spacer-row) {
+  height: 30px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.1s;
 }
 
-tbody tr:hover { background: var(--bg-row-hover); }
-tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
-tbody tr:nth-child(even):hover { background: var(--bg-row-hover); }
+tbody tr:not(.detail-row):not(.spacer-row):hover { background: var(--bg-row-hover); }
+
+.spacer-row td {
+  padding: 0 !important;
+  border: none !important;
+  line-height: 0;
+}
 
 td {
-  padding: 6px;
+  padding: 4px 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 td.title-cell {
@@ -363,7 +408,7 @@ tr.detail-row td {
 }
 
 .detail-section ul li::before {
-  content: "· ";
+  content: "\u00B7 ";
   color: var(--accent);
 }
 
@@ -403,17 +448,13 @@ tr.detail-row td {
   .filters {
     grid-template-columns: 1fr 1fr;
   }
-  col.c-director, col.c-codec, col.c-size { width: 0; display: none; }
-  td:nth-child(4), th:nth-child(4),
-  td:nth-child(10), th:nth-child(10),
-  td:nth-child(11), th:nth-child(11) { display: none; }
+  /* Movies: hide director(4), codec(10), size(11) */
+  .tab-movies col.c-director, .tab-movies col.c-codec, .tab-movies col.c-size { width: 0; }
 }
 
 @media (max-width: 600px) {
   .filters { grid-template-columns: 1fr; }
   body { font-size: 12px; }
-  col.c-audio { width: 0; display: none; }
-  td:nth-child(9), th:nth-child(9) { display: none; }
   td.thumb-cell img { height: calc(1em * 1.25); }
 }
 </style>
@@ -428,7 +469,7 @@ tr.detail-row td {
 
   <div class="filters">
     <div class="filter-group">
-      <label>Search (title, director, cast)</label>
+      <label id="search-label">Search (title, director, cast)</label>
       <input type="text" id="f-search" placeholder="Type to search...">
     </div>
     <div class="filter-group">
@@ -444,10 +485,10 @@ tr.detail-row td {
       <input type="number" id="f-year-max" placeholder="2026">
     </div>
     <div class="filter-group">
-      <label>Rating ≥</label>
+      <label>Rating &ge;</label>
       <input type="number" id="f-rating" placeholder="0" step="0.5" min="0" max="10">
     </div>
-    <div class="filter-group">
+    <div class="filter-group" id="fg-res">
       <label>Resolution</label>
       <select id="f-res">
         <option value="">All</option>
@@ -459,36 +500,15 @@ tr.detail-row td {
     </div>
   </div>
 
-  <div class="table-wrap">
+  <div class="tab-bar">
+    <button class="tab active" data-tab="movies">Movies</button>
+    <button class="tab" data-tab="series">TV Shows</button>
+  </div>
+
+  <div class="table-wrap" id="table-wrap">
     <table>
-      <colgroup>
-        <col class="c-thumb">
-        <col class="c-title">
-        <col class="c-year">
-        <col class="c-director">
-        <col class="c-genre">
-        <col class="c-rating">
-        <col class="c-runtime">
-        <col class="c-res">
-        <col class="c-audio">
-        <col class="c-codec">
-        <col class="c-size">
-      </colgroup>
-      <thead>
-        <tr>
-          <th class="th-thumb"></th>
-          <th data-col="title" class="sort-asc">Title</th>
-          <th data-col="year">Year</th>
-          <th data-col="director">Director</th>
-          <th data-col="genre">Genre</th>
-          <th data-col="rating">Rating</th>
-          <th data-col="runtime">Min</th>
-          <th data-col="res">Res</th>
-          <th data-col="audio">Audio</th>
-          <th data-col="codec">Codec</th>
-          <th data-col="size">Size</th>
-        </tr>
-      </thead>
+      <colgroup id="colgroup"></colgroup>
+      <thead id="thead"></thead>
       <tbody id="tbody">
         <tr><td colspan="11" class="status-msg">Loading library...</td></tr>
       </tbody>
@@ -508,7 +528,7 @@ tr.detail-row td {
       <div class="hover-card-blurb" id="hc-blurb"></div>
       <div class="hover-card-people" id="hc-people"></div>
     </div>
-    <button class="hover-card-enlarge" id="hc-enlarge" title="Enlarge">⤢</button>
+    <button class="hover-card-enlarge" id="hc-enlarge" title="Enlarge">&#x292E;</button>
   </div>
 </div>
 
@@ -516,33 +536,55 @@ tr.detail-row td {
 // ============================================================
 // JTX — Jellyfin Text Browser
 // Single-file application — no dependencies, no build step
+// Phase 8: Tabs (Movies / TV Shows) + Virtual Scrolling
 // ============================================================
 
 // --- CONFIGURATION ---
 const CONFIG = {
-  serverUrl: window.location.hostname === 'localhost'
-    ? 'http://192.168.1.183:8096'
-    : 'http://192.168.1.183:8096',
+  serverUrl: 'http://192.168.1.183:8096',
   apiKey: 'b62806a76e91466fa5964648d545a446',
-  fields: 'Overview,Genres,People,MediaStreams,Studios,CommunityRating,CriticRating,OfficialRating,ProductionYear,RunTimeTicks,Path,Container',
+  movieFields: 'Overview,Genres,People,MediaStreams,Studios,CommunityRating,CriticRating,OfficialRating,ProductionYear,RunTimeTicks,Path,Container',
+  seriesFields: 'Overview,Genres,People,Studios,CommunityRating,CriticRating,OfficialRating,ProductionYear,Status,ChildCount,RecursiveItemCount',
 };
 
-// --- DATA MODEL ---
+const ROW_HEIGHT = 30;
+const SCROLL_BUFFER = 15;
+
+// --- STATE ---
+let activeTab = 'movies';
+
 let allMovies = [];
 let filteredMovies = [];
+let movieSortCol = 'title';
+let movieSortDir = 'asc';
+
+let allSeries = [];
+let filteredSeries = [];
+let seriesSortCol = 'title';
+let seriesSortDir = 'asc';
+
 let synopses = {};
-let sortCol = 'title';
-let sortDir = 'asc';
 let expandedId = null;
 let hoverCardEnlarged = false;
+let currentStart = -1;
+let currentEnd = -1;
+let scrollRAF = null;
 
 // --- API ---
 async function fetchMovies() {
-  const url = `${CONFIG.serverUrl}/Items?IncludeItemTypes=Movie&Recursive=true&Fields=${CONFIG.fields}&StartIndex=0&Limit=10000&api_key=${CONFIG.apiKey}`;
+  const url = `${CONFIG.serverUrl}/Items?IncludeItemTypes=Movie&Recursive=true&Fields=${CONFIG.movieFields}&StartIndex=0&Limit=10000&api_key=${CONFIG.apiKey}`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`API error: ${resp.status}`);
   const data = await resp.json();
   return data.Items.map(parseMovie);
+}
+
+async function fetchSeries() {
+  const url = `${CONFIG.serverUrl}/Items?IncludeItemTypes=Series&Recursive=true&Fields=${CONFIG.seriesFields}&StartIndex=0&Limit=10000&api_key=${CONFIG.apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+  const data = await resp.json();
+  return data.Items.map(parseSeries);
 }
 
 async function fetchSynopses() {
@@ -564,6 +606,7 @@ function rtLabel(criticRating) {
   return pct >= 60 ? `${pct}% Fresh` : `${pct}% Rotten`;
 }
 
+// --- PARSE ---
 function parseMovie(item) {
   const videoStream = (item.MediaStreams || []).find(s => s.Type === 'Video') || {};
   const audioStream = (item.MediaStreams || []).find(s => s.Type === 'Audio') || {};
@@ -571,7 +614,6 @@ function parseMovie(item) {
   const actors = (item.People || []).filter(p => p.Type === 'Actor').map(p => p.Name);
   const height = videoStream.Height || 0;
   const width = videoStream.Width || 0;
-  const bitrate = videoStream.BitRate || 0;
 
   let resolution = 'SD';
   if (height >= 2160 || width >= 3840) resolution = '4K';
@@ -587,7 +629,6 @@ function parseMovie(item) {
 
   const runtimeMin = item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : 0;
 
-  // Estimate file size from bitrate and runtime (rough)
   const totalBitrate = (videoStream.BitRate || 0) + (audioStream.BitRate || 0);
   const durationSec = item.RunTimeTicks ? item.RunTimeTicks / 10000000 : 0;
   const sizeBytes = (totalBitrate * durationSec) / 8;
@@ -596,12 +637,12 @@ function parseMovie(item) {
     id: item.Id,
     title: item.Name || 'Unknown',
     year: item.ProductionYear || 0,
-    director: directors.join(', ') || '—',
+    director: directors.join(', ') || '\u2014',
     genres: (item.Genres || []),
-    genre: (item.Genres || []).join(', ') || '—',
+    genre: (item.Genres || []).join(', ') || '\u2014',
     rating: item.CommunityRating || 0,
     criticRating: item.CriticRating || 0,
-    officialRating: item.OfficialRating || '—',
+    officialRating: item.OfficialRating || '\u2014',
     runtime: runtimeMin,
     resolution: resolution,
     resHeight: height,
@@ -619,8 +660,28 @@ function parseMovie(item) {
   };
 }
 
+function parseSeries(item) {
+  const actors = (item.People || []).filter(p => p.Type === 'Actor').map(p => p.Name);
+  return {
+    id: item.Id,
+    title: item.Name || 'Unknown',
+    year: item.ProductionYear || 0,
+    genres: (item.Genres || []),
+    genre: (item.Genres || []).join(', ') || '\u2014',
+    rating: item.CommunityRating || 0,
+    criticRating: item.CriticRating || 0,
+    officialRating: item.OfficialRating || '\u2014',
+    seasons: item.ChildCount || 0,
+    episodes: item.RecursiveItemCount || 0,
+    status: item.Status || '\u2014',
+    studio: ((item.Studios || [])[0] || {}).Name || '\u2014',
+    overview: item.Overview || 'No overview available.',
+    cast: actors.slice(0, 8),
+  };
+}
+
 function formatSize(bytes) {
-  if (!bytes || bytes <= 0) return '—';
+  if (!bytes || bytes <= 0) return '\u2014';
   if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
   return (bytes / 1024).toFixed(0) + ' KB';
@@ -650,30 +711,168 @@ function sortMovies(movies, col, dir) {
   });
 }
 
-// --- FILTERING ---
-function filterMovies(movies) {
-  const search = document.getElementById('f-search').value.toLowerCase().trim();
-  const genre = document.getElementById('f-genre').value;
-  const yearMin = parseInt(document.getElementById('f-year-min').value) || 0;
-  const yearMax = parseInt(document.getElementById('f-year-max').value) || 9999;
-  const ratingMin = parseFloat(document.getElementById('f-rating').value) || 0;
-  const res = document.getElementById('f-res').value;
-
-  return movies.filter(m => {
-    if (search) {
-      const haystack = (m.title + ' ' + m.director + ' ' + m.cast.join(' ')).toLowerCase();
-      if (!haystack.includes(search)) return false;
+function sortSeriesData(series, col, dir) {
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...series].sort((a, b) => {
+    let va, vb;
+    switch (col) {
+      case 'title':    va = a.title.toLowerCase(); vb = b.title.toLowerCase(); break;
+      case 'year':     va = a.year; vb = b.year; break;
+      case 'genre':    va = a.genre.toLowerCase(); vb = b.genre.toLowerCase(); break;
+      case 'rating':   va = a.rating; vb = b.rating; break;
+      case 'seasons':  va = a.seasons; vb = b.seasons; break;
+      case 'episodes': va = a.episodes; vb = b.episodes; break;
+      case 'status':   va = a.status.toLowerCase(); vb = b.status.toLowerCase(); break;
+      case 'studio':   va = a.studio.toLowerCase(); vb = b.studio.toLowerCase(); break;
+      default:         va = a.title.toLowerCase(); vb = b.title.toLowerCase();
     }
-    if (genre && !m.genres.includes(genre)) return false;
-    if (m.year && (m.year < yearMin || m.year > yearMax)) return false;
-    if (m.rating < ratingMin) return false;
-    if (res) {
-      if (res === '4k' && m.resolution !== '4K') return false;
-      if (res === '1080' && m.resolution !== '1080p') return false;
-      if (res === '720' && m.resolution !== '720p') return false;
-      if (res === 'sd' && m.resolution !== 'SD') return false;
+    if (va < vb) return -1 * mult;
+    if (va > vb) return 1 * mult;
+    return 0;
+  });
+}
+
+// --- FILTERING ---
+function getFilters() {
+  return {
+    search: document.getElementById('f-search').value.toLowerCase().trim(),
+    genre: document.getElementById('f-genre').value,
+    yearMin: parseInt(document.getElementById('f-year-min').value) || 0,
+    yearMax: parseInt(document.getElementById('f-year-max').value) || 9999,
+    ratingMin: parseFloat(document.getElementById('f-rating').value) || 0,
+    res: document.getElementById('f-res').value,
+  };
+}
+
+function filterMoviesData(movies, f) {
+  return movies.filter(m => {
+    if (f.search) {
+      const haystack = (m.title + ' ' + m.director + ' ' + m.cast.join(' ')).toLowerCase();
+      if (!haystack.includes(f.search)) return false;
+    }
+    if (f.genre && !m.genres.includes(f.genre)) return false;
+    if (m.year && (m.year < f.yearMin || m.year > f.yearMax)) return false;
+    if (m.rating < f.ratingMin) return false;
+    if (f.res) {
+      if (f.res === '4k' && m.resolution !== '4K') return false;
+      if (f.res === '1080' && m.resolution !== '1080p') return false;
+      if (f.res === '720' && m.resolution !== '720p') return false;
+      if (f.res === 'sd' && m.resolution !== 'SD') return false;
     }
     return true;
+  });
+}
+
+function filterSeriesData(series, f) {
+  return series.filter(s => {
+    if (f.search) {
+      const haystack = (s.title + ' ' + s.studio + ' ' + s.cast.join(' ')).toLowerCase();
+      if (!haystack.includes(f.search)) return false;
+    }
+    if (f.genre && !s.genres.includes(f.genre)) return false;
+    if (s.year && (s.year < f.yearMin || s.year > f.yearMax)) return false;
+    if (s.rating < f.ratingMin) return false;
+    return true;
+  });
+}
+
+// --- TAB MANAGEMENT ---
+function switchTab(tab) {
+  if (activeTab === tab) return;
+  activeTab = tab;
+  expandedId = null;
+  currentStart = -1;
+  currentEnd = -1;
+  hideHoverCard();
+
+  // Update tab buttons
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+
+  // Show/hide resolution filter (movies only)
+  document.getElementById('fg-res').classList.toggle('hidden', tab === 'series');
+
+  // Update search label
+  document.getElementById('search-label').textContent =
+    tab === 'movies' ? 'Search (title, director, cast)' : 'Search (title, studio, cast)';
+
+  // Rebuild table header
+  buildTableHeader();
+
+  // Repopulate genres for this tab
+  populateGenres();
+
+  // Reset scroll
+  document.getElementById('table-wrap').scrollTop = 0;
+
+  // Render
+  renderTable();
+}
+
+function buildTableHeader() {
+  const colgroup = document.getElementById('colgroup');
+  const thead = document.getElementById('thead');
+
+  if (activeTab === 'movies') {
+    colgroup.innerHTML =
+      '<col class="c-thumb"><col class="c-title"><col class="c-year">' +
+      '<col class="c-director"><col class="c-genre"><col class="c-rating">' +
+      '<col class="c-runtime"><col class="c-res"><col class="c-audio">' +
+      '<col class="c-codec"><col class="c-size">';
+    thead.innerHTML = '<tr>' +
+      '<th class="th-thumb"></th>' +
+      '<th data-col="title">Title</th>' +
+      '<th data-col="year">Year</th>' +
+      '<th data-col="director">Director</th>' +
+      '<th data-col="genre">Genre</th>' +
+      '<th data-col="rating">Rating</th>' +
+      '<th data-col="runtime">Min</th>' +
+      '<th data-col="res">Res</th>' +
+      '<th data-col="audio">Audio</th>' +
+      '<th data-col="codec">Codec</th>' +
+      '<th data-col="size">Size</th>' +
+      '</tr>';
+  } else {
+    colgroup.innerHTML =
+      '<col class="c-thumb"><col class="c-title" style="width:28%"><col class="c-year">' +
+      '<col class="c-genre" style="width:14%"><col class="c-rating" style="width:7%">' +
+      '<col class="c-seasons"><col class="c-episodes"><col class="c-status"><col class="c-studio">';
+    thead.innerHTML = '<tr>' +
+      '<th class="th-thumb"></th>' +
+      '<th data-col="title">Title</th>' +
+      '<th data-col="year">Year</th>' +
+      '<th data-col="genre">Genre</th>' +
+      '<th data-col="rating">Rating</th>' +
+      '<th data-col="seasons">Seasons</th>' +
+      '<th data-col="episodes">Episodes</th>' +
+      '<th data-col="status">Status</th>' +
+      '<th data-col="studio">Studio</th>' +
+      '</tr>';
+  }
+
+  // Apply sort indicator
+  const sc = activeTab === 'movies' ? movieSortCol : seriesSortCol;
+  const sd = activeTab === 'movies' ? movieSortDir : seriesSortDir;
+  const sortTh = thead.querySelector(`th[data-col="${sc}"]`);
+  if (sortTh) sortTh.classList.add(sd === 'asc' ? 'sort-asc' : 'sort-desc');
+
+  // Attach sort handlers
+  thead.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (activeTab === 'movies') {
+        if (movieSortCol === col) movieSortDir = movieSortDir === 'asc' ? 'desc' : 'asc';
+        else { movieSortCol = col; movieSortDir = 'asc'; }
+      } else {
+        if (seriesSortCol === col) seriesSortDir = seriesSortDir === 'asc' ? 'desc' : 'asc';
+        else { seriesSortCol = col; seriesSortDir = 'asc'; }
+      }
+      thead.querySelectorAll('th').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+      const sDir = activeTab === 'movies' ? movieSortDir : seriesSortDir;
+      th.classList.add(sDir === 'asc' ? 'sort-asc' : 'sort-desc');
+      renderTable();
+    });
   });
 }
 
@@ -690,129 +889,241 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function colCount() {
+  return activeTab === 'movies' ? 11 : 9;
+}
+
 function renderTable() {
-  filteredMovies = filterMovies(allMovies);
-  filteredMovies = sortMovies(filteredMovies, sortCol, sortDir);
+  const filters = getFilters();
+
+  if (activeTab === 'movies') {
+    filteredMovies = filterMoviesData(allMovies, filters);
+    filteredMovies = sortMovies(filteredMovies, movieSortCol, movieSortDir);
+  } else {
+    filteredSeries = filterSeriesData(allSeries, filters);
+    filteredSeries = sortSeriesData(filteredSeries, seriesSortCol, seriesSortDir);
+  }
+
+  const filtered = activeTab === 'movies' ? filteredMovies : filteredSeries;
+  const total = activeTab === 'movies' ? allMovies.length : allSeries.length;
+  const label = activeTab === 'movies' ? 'movies' : 'shows';
 
   const stats = document.getElementById('stats');
-  stats.textContent = filteredMovies.length === allMovies.length
-    ? `${allMovies.length} movies`
-    : `${filteredMovies.length} of ${allMovies.length} movies`;
+  stats.textContent = filtered.length === total
+    ? `${total} ${label}`
+    : `${filtered.length} of ${total} ${label}`;
 
   const tbody = document.getElementById('tbody');
-  if (filteredMovies.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="status-msg">No movies match your filters.</td></tr>';
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colCount()}" class="status-msg">No ${label} match your filters.</td></tr>`;
+    currentStart = -1;
+    currentEnd = -1;
     return;
   }
 
-  const rows = [];
-  for (const m of filteredMovies) {
-    const rc = ratingClass(m.rating);
-    const thumbSrc = thumbnailUrl(m.id, 40);
-    rows.push(
-      `<tr data-id="${m.id}">` +
-      `<td class="thumb-cell"><img src="${thumbSrc}" alt="" loading="lazy" onerror="this.style.display='none'"></td>` +
-      `<td class="title-cell" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>` +
-      `<td>${m.year || '—'}</td>` +
-      `<td title="${escapeHtml(m.director)}">${escapeHtml(m.director)}</td>` +
-      `<td title="${escapeHtml(m.genre)}">${escapeHtml(m.genre)}</td>` +
-      `<td class="rating-cell ${rc}">${m.rating ? m.rating.toFixed(1) : '—'}</td>` +
-      `<td>${m.runtime || '—'}</td>` +
-      `<td>${m.resolution}</td>` +
-      `<td>${m.audio}</td>` +
-      `<td>${m.codec}</td>` +
-      `<td>${m.size}</td>` +
-      `</tr>`
-    );
+  // Force re-render of visible rows
+  currentStart = -1;
+  currentEnd = -1;
+  renderVisibleRows();
+}
 
-    if (expandedId === m.id) {
-      rows.push(renderDetailRow(m));
+function renderVisibleRows() {
+  const wrap = document.getElementById('table-wrap');
+  const filtered = activeTab === 'movies' ? filteredMovies : filteredSeries;
+  const totalRows = filtered.length;
+  if (totalRows === 0) return;
+
+  const scrollTop = wrap.scrollTop;
+  const containerHeight = wrap.clientHeight;
+  const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - SCROLL_BUFFER);
+  const visibleCount = Math.ceil(containerHeight / ROW_HEIGHT) + SCROLL_BUFFER * 2;
+  const end = Math.min(totalRows, start + visibleCount);
+
+  if (start === currentStart && end === currentEnd) return;
+  currentStart = start;
+  currentEnd = end;
+
+  const cols = colCount();
+  const rows = [];
+
+  // Top spacer
+  if (start > 0) {
+    rows.push(`<tr class="spacer-row"><td colspan="${cols}" style="height:${start * ROW_HEIGHT}px"></td></tr>`);
+  }
+
+  // Visible rows
+  for (let i = start; i < end; i++) {
+    const item = filtered[i];
+    rows.push(activeTab === 'movies' ? renderMovieRow(item) : renderSeriesRow(item));
+    if (expandedId === item.id) {
+      rows.push(activeTab === 'movies' ? renderMovieDetailRow(item) : renderSeriesDetailRow(item));
     }
   }
 
-  tbody.innerHTML = rows.join('');
+  // Bottom spacer
+  if (end < totalRows) {
+    rows.push(`<tr class="spacer-row"><td colspan="${cols}" style="height:${(totalRows - end) * ROW_HEIGHT}px"></td></tr>`);
+  }
+
+  document.getElementById('tbody').innerHTML = rows.join('');
 }
 
-function renderDetailRow(m) {
+function renderMovieRow(m) {
+  const rc = ratingClass(m.rating);
+  const thumbSrc = thumbnailUrl(m.id, 40);
+  return `<tr data-id="${m.id}">` +
+    `<td class="thumb-cell"><img src="${thumbSrc}" alt="" loading="lazy" onerror="this.style.display='none'"></td>` +
+    `<td class="title-cell" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>` +
+    `<td>${m.year || '\u2014'}</td>` +
+    `<td title="${escapeHtml(m.director)}">${escapeHtml(m.director)}</td>` +
+    `<td title="${escapeHtml(m.genre)}">${escapeHtml(m.genre)}</td>` +
+    `<td class="rating-cell ${rc}">${m.rating ? m.rating.toFixed(1) : '\u2014'}</td>` +
+    `<td>${m.runtime || '\u2014'}</td>` +
+    `<td>${m.resolution}</td>` +
+    `<td>${m.audio}</td>` +
+    `<td>${m.codec}</td>` +
+    `<td>${m.size}</td>` +
+    `</tr>`;
+}
+
+function renderSeriesRow(s) {
+  const rc = ratingClass(s.rating);
+  const thumbSrc = thumbnailUrl(s.id, 40);
+  return `<tr data-id="${s.id}">` +
+    `<td class="thumb-cell"><img src="${thumbSrc}" alt="" loading="lazy" onerror="this.style.display='none'"></td>` +
+    `<td class="title-cell" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</td>` +
+    `<td>${s.year || '\u2014'}</td>` +
+    `<td title="${escapeHtml(s.genre)}">${escapeHtml(s.genre)}</td>` +
+    `<td class="rating-cell ${rc}">${s.rating ? s.rating.toFixed(1) : '\u2014'}</td>` +
+    `<td>${s.seasons || '\u2014'}</td>` +
+    `<td>${s.episodes || '\u2014'}</td>` +
+    `<td>${escapeHtml(s.status)}</td>` +
+    `<td title="${escapeHtml(s.studio)}">${escapeHtml(s.studio)}</td>` +
+    `</tr>`;
+}
+
+function renderMovieDetailRow(m) {
   const castList = m.cast.length
     ? m.cast.map(c => `<li>${escapeHtml(c)}</li>`).join('')
     : '<li>No cast info</li>';
-
   const studioList = m.studios.length
     ? m.studios.map(s => escapeHtml(s)).join(', ')
-    : '—';
+    : '\u2014';
 
-  const playUrl = `${CONFIG.serverUrl}/web/#/details?id=${m.id}&serverId=${m.id.substring(0, 32)}`;
-
-  return (
-    `<tr class="detail-row"><td colspan="11">` +
+  return `<tr class="detail-row"><td colspan="11">` +
     `<div class="detail-grid">` +
       `<div class="detail-section">` +
         `<h3>Overview</h3>` +
         `<p>${escapeHtml(m.overview)}</p>` +
         `<h3 style="margin-top:10px">Technical</h3>` +
-        `<p>Video: ${m.codec} ${m.resolution} (${m.resHeight}p) · Audio: ${m.audioCodec} ${m.audio} · Size: ${m.size}</p>` +
-        `<p>Studio: ${escapeHtml(studioList)} · Rated: ${escapeHtml(m.officialRating)}</p>` +
+        `<p>Video: ${m.codec} ${m.resolution} (${m.resHeight}p) \u00B7 Audio: ${m.audioCodec} ${m.audio} \u00B7 Size: ${m.size}</p>` +
+        `<p>Studio: ${escapeHtml(studioList)} \u00B7 Rated: ${escapeHtml(m.officialRating)}</p>` +
       `</div>` +
       `<div class="detail-section">` +
         `<h3>Cast</h3>` +
         `<ul>${castList}</ul>` +
       `</div>` +
     `</div>` +
-    `<a class="play-btn" href="${CONFIG.serverUrl}/web/#/details?id=${m.id}" target="_blank">▶ Open in Jellyfin</a>` +
-    `</td></tr>`
-  );
+    `<a class="play-btn" href="${CONFIG.serverUrl}/web/#/details?id=${m.id}" target="_blank">\u25B6 Open in Jellyfin</a>` +
+    `</td></tr>`;
+}
+
+function renderSeriesDetailRow(s) {
+  const castList = s.cast.length
+    ? s.cast.map(c => `<li>${escapeHtml(c)}</li>`).join('')
+    : '<li>No cast info</li>';
+
+  return `<tr class="detail-row"><td colspan="9">` +
+    `<div class="detail-grid">` +
+      `<div class="detail-section">` +
+        `<h3>Overview</h3>` +
+        `<p>${escapeHtml(s.overview)}</p>` +
+        `<h3 style="margin-top:10px">Details</h3>` +
+        `<p>${s.seasons} season${s.seasons !== 1 ? 's' : ''} \u00B7 ${s.episodes} episodes \u00B7 Status: ${escapeHtml(s.status)}</p>` +
+        `<p>Studio: ${escapeHtml(s.studio)} \u00B7 Rated: ${escapeHtml(s.officialRating)}</p>` +
+      `</div>` +
+      `<div class="detail-section">` +
+        `<h3>Cast</h3>` +
+        `<ul>${castList}</ul>` +
+      `</div>` +
+    `</div>` +
+    `<a class="play-btn" href="${CONFIG.serverUrl}/web/#/details?id=${s.id}" target="_blank">\u25B6 Open in Jellyfin</a>` +
+    `</td></tr>`;
 }
 
 function populateGenres() {
   const genreSet = new Set();
-  allMovies.forEach(m => m.genres.forEach(g => genreSet.add(g)));
+  const data = activeTab === 'movies' ? allMovies : allSeries;
+  data.forEach(item => item.genres.forEach(g => genreSet.add(g)));
   const select = document.getElementById('f-genre');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">All</option>';
   [...genreSet].sort().forEach(g => {
     const opt = document.createElement('option');
     opt.value = g;
     opt.textContent = g;
     select.appendChild(opt);
   });
+  // Restore selection if still valid
+  if (currentValue && genreSet.has(currentValue)) {
+    select.value = currentValue;
+  }
 }
 
 // --- HOVER CARD ---
-function showHoverCard(movieId, anchorEl) {
-  const m = allMovies.find(x => x.id === movieId);
-  if (!m) return;
+function findItem(id) {
+  if (activeTab === 'movies') return allMovies.find(x => x.id === id);
+  return allSeries.find(x => x.id === id);
+}
+
+function showHoverCard(itemId, anchorEl) {
+  const item = findItem(itemId);
+  if (!item) return;
 
   const card = document.getElementById('hover-card');
-  const syn = synopses[movieId];
-  const blurb = syn ? syn.blurb : m.overview;
-  const rt = rtLabel(m.criticRating);
+  const syn = synopses[itemId];
+  const blurb = syn ? syn.blurb : item.overview;
+  const rt = rtLabel(item.criticRating);
 
-  document.getElementById('hc-poster').src = thumbnailUrl(m.id, 300);
-  document.getElementById('hc-title').textContent = m.title;
-  document.getElementById('hc-meta').textContent = [m.year || '', m.officialRating, m.runtime ? m.runtime + ' min' : ''].filter(Boolean).join(' · ');
+  document.getElementById('hc-poster').src = thumbnailUrl(item.id, 300);
+  document.getElementById('hc-title').textContent = item.title;
+
+  // Build meta line based on tab
+  let metaParts;
+  if (activeTab === 'movies') {
+    metaParts = [item.year || '', item.officialRating, item.runtime ? item.runtime + ' min' : ''];
+  } else {
+    metaParts = [item.year || '', item.officialRating, item.seasons ? item.seasons + ' season' + (item.seasons !== 1 ? 's' : '') : '', item.status];
+  }
+  document.getElementById('hc-meta').textContent = metaParts.filter(Boolean).join(' \u00B7 ');
 
   const rtEl = document.getElementById('hc-rt');
   if (rt) {
     rtEl.textContent = rt;
-    rtEl.className = 'hover-card-rt ' + (m.criticRating >= 60 ? 'fresh' : 'rotten');
+    rtEl.className = 'hover-card-rt ' + (item.criticRating >= 60 ? 'fresh' : 'rotten');
     rtEl.style.display = '';
   } else {
     rtEl.style.display = 'none';
   }
 
-  document.getElementById('hc-genres').innerHTML = m.genres.map(g => `<span>${escapeHtml(g)}</span>`).join('');
+  document.getElementById('hc-genres').innerHTML = item.genres.map(g => `<span>${escapeHtml(g)}</span>`).join('');
   document.getElementById('hc-blurb').textContent = blurb;
 
   const people = [];
-  if (m.director && m.director !== '—') people.push('Dir: ' + m.director);
-  if (m.cast.length) people.push('Cast: ' + m.cast.slice(0, 4).join(', '));
-  document.getElementById('hc-people').textContent = people.join(' · ');
+  if (activeTab === 'movies' && item.director && item.director !== '\u2014') {
+    people.push('Dir: ' + item.director);
+  }
+  if (activeTab === 'series' && item.studio && item.studio !== '\u2014') {
+    people.push('Studio: ' + item.studio);
+  }
+  if (item.cast.length) people.push('Cast: ' + item.cast.slice(0, 4).join(', '));
+  document.getElementById('hc-people').textContent = people.join(' \u00B7 ');
 
   // Position card near the thumbnail
   const rect = anchorEl.getBoundingClientRect();
   let top = rect.top;
   let left = rect.right + 8;
 
-  // Keep card on screen
   const cardW = hoverCardEnlarged ? 620 : 420;
   const cardH = hoverCardEnlarged ? 460 : 320;
   if (left + cardW > window.innerWidth) left = rect.left - cardW - 8;
@@ -834,34 +1145,25 @@ function hideHoverCard() {
 
 // --- EVENT HANDLERS ---
 function initEvents() {
-  // Sort on header click (skip non-sortable columns)
-  document.querySelectorAll('thead th[data-col]').forEach(th => {
-    th.addEventListener('click', () => {
-      const col = th.dataset.col;
-      if (sortCol === col) {
-        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-      } else {
-        sortCol = col;
-        sortDir = 'asc';
-      }
-      document.querySelectorAll('thead th').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
-      th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
-      renderTable();
-    });
+  // Tab clicks
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // Expand/collapse on row click (but not on thumbnail)
+  // Row click — expand/collapse (skip thumbnails)
   document.getElementById('tbody').addEventListener('click', (e) => {
     if (e.target.closest('.thumb-cell')) return;
     const row = e.target.closest('tr');
-    if (!row || row.classList.contains('detail-row')) return;
+    if (!row || row.classList.contains('detail-row') || row.classList.contains('spacer-row')) return;
     const id = row.dataset.id;
     if (!id) return;
     expandedId = expandedId === id ? null : id;
-    renderTable();
+    currentStart = -1;
+    currentEnd = -1;
+    renderVisibleRows();
   });
 
-  // Hover card on thumbnail — desktop: mouseenter/leave
+  // Hover card on thumbnail — mouseenter/leave
   const tbody = document.getElementById('tbody');
   let hoverTimeout;
   tbody.addEventListener('mouseenter', (e) => {
@@ -878,18 +1180,16 @@ function initEvents() {
     const thumb = e.target.closest('.thumb-cell');
     if (!thumb) return;
     clearTimeout(hoverTimeout);
-    // Delay hide to allow moving to the card
     setTimeout(() => {
       const card = document.getElementById('hover-card');
       if (!card.matches(':hover')) hideHoverCard();
     }, 150);
   }, true);
 
-  // Keep card visible while hovering over it
   const hoverCard = document.getElementById('hover-card');
   hoverCard.addEventListener('mouseleave', hideHoverCard);
 
-  // Mobile: tap on thumbnail toggles card
+  // Mobile: tap thumbnail toggles card
   tbody.addEventListener('touchstart', (e) => {
     const thumb = e.target.closest('.thumb-cell');
     if (!thumb) { hideHoverCard(); return; }
@@ -898,10 +1198,10 @@ function initEvents() {
     const id = row && row.dataset.id;
     if (!id) return;
     const card = document.getElementById('hover-card');
-    if (card.classList.contains('visible') && card.dataset.movieId === id) {
+    if (card.classList.contains('visible') && card.dataset.itemId === id) {
       hideHoverCard();
     } else {
-      card.dataset.movieId = id;
+      card.dataset.itemId = id;
       showHoverCard(id, thumb);
     }
   }, { passive: false });
@@ -909,9 +1209,17 @@ function initEvents() {
   // Enlarge button
   document.getElementById('hc-enlarge').addEventListener('click', (e) => {
     e.stopPropagation();
-    const card = document.getElementById('hover-card');
     hoverCardEnlarged = !hoverCardEnlarged;
-    card.classList.toggle('enlarged', hoverCardEnlarged);
+    document.getElementById('hover-card').classList.toggle('enlarged', hoverCardEnlarged);
+  });
+
+  // Virtual scroll handler
+  document.getElementById('table-wrap').addEventListener('scroll', () => {
+    if (scrollRAF) return;
+    scrollRAF = requestAnimationFrame(() => {
+      scrollRAF = null;
+      renderVisibleRows();
+    });
   });
 
   // Filter inputs
@@ -925,7 +1233,7 @@ function initEvents() {
     el.addEventListener('change', renderTable);
   });
 
-  // Keyboard shortcut: Escape clears filters / hides hover card
+  // Keyboard: Escape clears, / focuses search
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       hideHoverCard();
@@ -938,7 +1246,6 @@ function initEvents() {
       expandedId = null;
       renderTable();
     }
-    // Focus search on / key
     if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
       e.preventDefault();
       document.getElementById('f-search').focus();
@@ -949,9 +1256,16 @@ function initEvents() {
 // --- INIT ---
 async function init() {
   try {
-    const [movies, syn] = await Promise.all([fetchMovies(), fetchSynopses()]);
+    const [movies, series, syn] = await Promise.all([
+      fetchMovies(),
+      fetchSeries(),
+      fetchSynopses(),
+    ]);
     allMovies = movies;
+    allSeries = series;
     synopses = syn;
+
+    buildTableHeader();
     populateGenres();
     initEvents();
     renderTable();
@@ -965,7 +1279,7 @@ async function init() {
 
 // Export for testing (if loaded as module)
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseMovie, sortMovies, filterMovies, formatSize, ratingClass };
+  module.exports = { parseMovie, parseSeries, sortMovies, sortSeriesData, filterMoviesData, filterSeriesData, formatSize, ratingClass };
 }
 
 init();

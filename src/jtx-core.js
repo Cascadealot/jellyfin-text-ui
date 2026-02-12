@@ -125,3 +125,69 @@ export function ratingClass(r) {
   if (r >= 5.5) return 'rating-mid';
   return 'rating-low';
 }
+
+// --- TV SHOWS ---
+export function parseSeries(item) {
+  const actors = (item.People || []).filter(p => p.Type === 'Actor').map(p => p.Name);
+  return {
+    id: item.Id,
+    title: item.Name || 'Unknown',
+    year: item.ProductionYear || 0,
+    genres: (item.Genres || []),
+    genre: (item.Genres || []).join(', ') || '—',
+    rating: item.CommunityRating || 0,
+    criticRating: item.CriticRating || 0,
+    officialRating: item.OfficialRating || '—',
+    seasons: item.ChildCount || 0,
+    episodes: item.RecursiveItemCount || 0,
+    status: item.Status || '—',
+    studio: ((item.Studios || [])[0] || {}).Name || '—',
+    overview: item.Overview || 'No overview available.',
+    cast: actors.slice(0, 8),
+  };
+}
+
+export function sortSeries(series, col, dir) {
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...series].sort((a, b) => {
+    let va, vb;
+    switch (col) {
+      case 'title':    va = a.title.toLowerCase(); vb = b.title.toLowerCase(); break;
+      case 'year':     va = a.year; vb = b.year; break;
+      case 'genre':    va = a.genre.toLowerCase(); vb = b.genre.toLowerCase(); break;
+      case 'rating':   va = a.rating; vb = b.rating; break;
+      case 'seasons':  va = a.seasons; vb = b.seasons; break;
+      case 'episodes': va = a.episodes; vb = b.episodes; break;
+      case 'status':   va = a.status.toLowerCase(); vb = b.status.toLowerCase(); break;
+      case 'studio':   va = a.studio.toLowerCase(); vb = b.studio.toLowerCase(); break;
+      default:         va = a.title.toLowerCase(); vb = b.title.toLowerCase();
+    }
+    if (va < vb) return -1 * mult;
+    if (va > vb) return 1 * mult;
+    return 0;
+  });
+}
+
+export function filterSeries(series, filters) {
+  const { search = '', genre = '', yearMin = 0, yearMax = 9999, ratingMin = 0 } = filters;
+  const searchLower = search.toLowerCase().trim();
+
+  return series.filter(s => {
+    if (searchLower) {
+      const haystack = (s.title + ' ' + s.studio + ' ' + s.cast.join(' ')).toLowerCase();
+      if (!haystack.includes(searchLower)) return false;
+    }
+    if (genre && !s.genres.includes(genre)) return false;
+    if (s.year && (s.year < yearMin || s.year > yearMax)) return false;
+    if (s.rating < ratingMin) return false;
+    return true;
+  });
+}
+
+// --- VIRTUAL SCROLLING ---
+export function visibleRange(scrollTop, containerHeight, rowHeight, totalRows, buffer = 10) {
+  const start = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
+  const visibleCount = Math.ceil(containerHeight / rowHeight) + buffer * 2;
+  const end = Math.min(totalRows, start + visibleCount);
+  return { start, end };
+}
