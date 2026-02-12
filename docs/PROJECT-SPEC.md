@@ -351,13 +351,21 @@ chore: configure CI workflow
 - AI-generated blurbs via Claude API
 - Update tests for new features
 
-### Phase 7: AI Synopsis Pipeline (NEW)
+### Phase 7: AI Synopsis Pipeline
 - Set up Anthropic API key
 - Build `scripts/generate-synopses.js` — Node.js script
 - Define critic persona prompt (Lofoten Islands sci-fi critic, jazz lover)
 - Generate blurbs for entire library
 - Deploy synopses.json alongside index.html
 - Schedule re-generation for new movies
+
+### Phase 8: Virtual Scrolling + TV Shows Tab (NEW)
+- Virtual scrolling — render only visible rows for 5K+ item performance
+- Tabbed interface — Movies | TV Shows
+- TV Shows tab with Series-level data (title, year, genre, seasons, episodes, status)
+- Hover cards work on both tabs
+- Updated tests for new features
+- Designed to handle 5,000-20,000+ items smoothly
 
 ---
 
@@ -371,10 +379,13 @@ chore: configure CI workflow
 | Jellyfin API access | Confirmed working, admin account active, token-based auth tested |
 | Hosting | nginx container on NAS, port 8080, live at `http://192.168.1.183:8080` |
 | Authentication | Read-only API key embedded: `b62806a76e91466fa5964648d545a446` |
-| Phased approach | Approved, now extended with Phases 6-7 |
+| Phased approach | Approved, now extended with Phases 6-8 |
 | Blurb tone | Lofoten Islands sci-fi critic persona, jazz lover, dry Nordic wit |
 | Thumbnail size | Font height + 25% in table; hover card medium with enlarge option |
 | Claude API key | Pending — Stanlee to retrieve from Anthropic console |
+| Library scale | ~5,000 movies + ~5,000 TV episodes, growing |
+| Virtual scrolling | Approved — render only visible rows for performance |
+| TV Shows | Two-tab design approved (Movies / TV Shows) |
 
 ---
 
@@ -396,8 +407,8 @@ chore: configure CI workflow
 
 ---
 
-*Document version: 1.2*
+*Document version: 1.3*
 *Created: 2026-02-11*
-*Updated: 2026-02-12 — v0.1 shipped, Phase 6-7 defined, critic persona established*
+*Updated: 2026-02-12 — Phase 8 defined: virtual scrolling + TV Shows tab*
 *Author: Claude (AI Development Agent)*
 *For review by: Stanlee (Project Owner)*
