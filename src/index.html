@@ -114,7 +114,8 @@ table {
 }
 
 /* Column widths */
-col.c-title    { width: 28%; }
+col.c-thumb    { width: 50px; }
+col.c-title    { width: 26%; }
 col.c-year     { width: 6%; }
 col.c-director { width: 14%; }
 col.c-genre    { width: 12%; }
@@ -124,6 +125,152 @@ col.c-res      { width: 7%; }
 col.c-audio    { width: 7%; }
 col.c-codec    { width: 7%; }
 col.c-size     { width: 7%; }
+
+/* Thumbnail */
+td.thumb-cell {
+  padding: 2px 4px;
+  width: 50px;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+td.thumb-cell img {
+  height: calc(1em * 1.5 * 1.25); /* font line-height + 25% */
+  width: auto;
+  border-radius: 2px;
+  display: block;
+  object-fit: cover;
+}
+
+th.th-thumb {
+  width: 50px;
+  cursor: default !important;
+}
+
+/* Hover Card */
+.hover-card {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  width: 420px;
+  max-height: 320px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hover-card.visible {
+  display: flex;
+  pointer-events: auto;
+}
+
+.hover-card.enlarged {
+  width: 620px;
+  max-height: 460px;
+}
+
+.hover-card-poster {
+  flex-shrink: 0;
+  width: 140px;
+  background: var(--bg);
+}
+
+.hover-card.enlarged .hover-card-poster {
+  width: 200px;
+}
+
+.hover-card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hover-card-body {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.hover-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hover-card-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.hover-card-rt {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+.hover-card-rt.fresh { background: #4a7c3f; color: #c8f7c0; }
+.hover-card-rt.rotten { background: #7c3f3f; color: #f7c0c0; }
+
+.hover-card-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.hover-card-genres span {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: rgba(233,69,96,0.15);
+  color: var(--accent);
+  border-radius: 10px;
+}
+
+.hover-card-blurb {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.hover-card-people {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.hover-card-enlarge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.hover-card-enlarge:hover { color: var(--text-bright); }
 
 thead th {
   position: sticky;
@@ -257,16 +404,17 @@ tr.detail-row td {
     grid-template-columns: 1fr 1fr;
   }
   col.c-director, col.c-codec, col.c-size { width: 0; display: none; }
-  td:nth-child(3), th:nth-child(3),
-  td:nth-child(9), th:nth-child(9),
-  td:nth-child(10), th:nth-child(10) { display: none; }
+  td:nth-child(4), th:nth-child(4),
+  td:nth-child(10), th:nth-child(10),
+  td:nth-child(11), th:nth-child(11) { display: none; }
 }
 
 @media (max-width: 600px) {
   .filters { grid-template-columns: 1fr; }
   body { font-size: 12px; }
   col.c-audio { width: 0; display: none; }
-  td:nth-child(8), th:nth-child(8) { display: none; }
+  td:nth-child(9), th:nth-child(9) { display: none; }
+  td.thumb-cell img { height: calc(1em * 1.25); }
 }
 </style>
 </head>
@@ -314,6 +462,7 @@ tr.detail-row td {
   <div class="table-wrap">
     <table>
       <colgroup>
+        <col class="c-thumb">
         <col class="c-title">
         <col class="c-year">
         <col class="c-director">
@@ -327,6 +476,7 @@ tr.detail-row td {
       </colgroup>
       <thead>
         <tr>
+          <th class="th-thumb"></th>
           <th data-col="title" class="sort-asc">Title</th>
           <th data-col="year">Year</th>
           <th data-col="director">Director</th>
@@ -340,9 +490,25 @@ tr.detail-row td {
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="10" class="status-msg">Loading library...</td></tr>
+        <tr><td colspan="11" class="status-msg">Loading library...</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Hover Card -->
+  <div class="hover-card" id="hover-card">
+    <div class="hover-card-poster">
+      <img id="hc-poster" src="" alt="">
+    </div>
+    <div class="hover-card-body">
+      <div class="hover-card-title" id="hc-title"></div>
+      <div class="hover-card-meta" id="hc-meta"></div>
+      <span class="hover-card-rt" id="hc-rt"></span>
+      <div class="hover-card-genres" id="hc-genres"></div>
+      <div class="hover-card-blurb" id="hc-blurb"></div>
+      <div class="hover-card-people" id="hc-people"></div>
+    </div>
+    <button class="hover-card-enlarge" id="hc-enlarge" title="Enlarge">⤢</button>
   </div>
 </div>
 
@@ -358,15 +524,17 @@ const CONFIG = {
     ? 'http://192.168.1.183:8096'
     : 'http://192.168.1.183:8096',
   apiKey: 'b62806a76e91466fa5964648d545a446',
-  fields: 'Overview,Genres,People,MediaStreams,Studios,CommunityRating,OfficialRating,ProductionYear,RunTimeTicks,Path,Container',
+  fields: 'Overview,Genres,People,MediaStreams,Studios,CommunityRating,CriticRating,OfficialRating,ProductionYear,RunTimeTicks,Path,Container',
 };
 
 // --- DATA MODEL ---
 let allMovies = [];
 let filteredMovies = [];
+let synopses = {};
 let sortCol = 'title';
 let sortDir = 'asc';
 let expandedId = null;
+let hoverCardEnlarged = false;
 
 // --- API ---
 async function fetchMovies() {
@@ -375,6 +543,25 @@ async function fetchMovies() {
   if (!resp.ok) throw new Error(`API error: ${resp.status}`);
   const data = await resp.json();
   return data.Items.map(parseMovie);
+}
+
+async function fetchSynopses() {
+  try {
+    const resp = await fetch('synopses.json');
+    if (resp.ok) return await resp.json();
+  } catch (e) { /* synopses are optional */ }
+  return {};
+}
+
+function thumbnailUrl(id, height = 40) {
+  if (!id) return '';
+  return `${CONFIG.serverUrl}/Items/${id}/Images/Primary?maxHeight=${height}&quality=80&api_key=${CONFIG.apiKey}`;
+}
+
+function rtLabel(criticRating) {
+  if (criticRating == null || criticRating === 0) return '';
+  const pct = Math.round(criticRating);
+  return pct >= 60 ? `${pct}% Fresh` : `${pct}% Rotten`;
 }
 
 function parseMovie(item) {
@@ -413,6 +600,7 @@ function parseMovie(item) {
     genres: (item.Genres || []),
     genre: (item.Genres || []).join(', ') || '—',
     rating: item.CommunityRating || 0,
+    criticRating: item.CriticRating || 0,
     officialRating: item.OfficialRating || '—',
     runtime: runtimeMin,
     resolution: resolution,
@@ -513,15 +701,17 @@ function renderTable() {
 
   const tbody = document.getElementById('tbody');
   if (filteredMovies.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="status-msg">No movies match your filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="status-msg">No movies match your filters.</td></tr>';
     return;
   }
 
   const rows = [];
   for (const m of filteredMovies) {
     const rc = ratingClass(m.rating);
+    const thumbSrc = thumbnailUrl(m.id, 40);
     rows.push(
       `<tr data-id="${m.id}">` +
+      `<td class="thumb-cell"><img src="${thumbSrc}" alt="" loading="lazy" onerror="this.style.display='none'"></td>` +
       `<td class="title-cell" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>` +
       `<td>${m.year || '—'}</td>` +
       `<td title="${escapeHtml(m.director)}">${escapeHtml(m.director)}</td>` +
@@ -555,7 +745,7 @@ function renderDetailRow(m) {
   const playUrl = `${CONFIG.serverUrl}/web/#/details?id=${m.id}&serverId=${m.id.substring(0, 32)}`;
 
   return (
-    `<tr class="detail-row"><td colspan="10">` +
+    `<tr class="detail-row"><td colspan="11">` +
     `<div class="detail-grid">` +
       `<div class="detail-section">` +
         `<h3>Overview</h3>` +
@@ -586,10 +776,66 @@ function populateGenres() {
   });
 }
 
+// --- HOVER CARD ---
+function showHoverCard(movieId, anchorEl) {
+  const m = allMovies.find(x => x.id === movieId);
+  if (!m) return;
+
+  const card = document.getElementById('hover-card');
+  const syn = synopses[movieId];
+  const blurb = syn ? syn.blurb : m.overview;
+  const rt = rtLabel(m.criticRating);
+
+  document.getElementById('hc-poster').src = thumbnailUrl(m.id, 300);
+  document.getElementById('hc-title').textContent = m.title;
+  document.getElementById('hc-meta').textContent = [m.year || '', m.officialRating, m.runtime ? m.runtime + ' min' : ''].filter(Boolean).join(' · ');
+
+  const rtEl = document.getElementById('hc-rt');
+  if (rt) {
+    rtEl.textContent = rt;
+    rtEl.className = 'hover-card-rt ' + (m.criticRating >= 60 ? 'fresh' : 'rotten');
+    rtEl.style.display = '';
+  } else {
+    rtEl.style.display = 'none';
+  }
+
+  document.getElementById('hc-genres').innerHTML = m.genres.map(g => `<span>${escapeHtml(g)}</span>`).join('');
+  document.getElementById('hc-blurb').textContent = blurb;
+
+  const people = [];
+  if (m.director && m.director !== '—') people.push('Dir: ' + m.director);
+  if (m.cast.length) people.push('Cast: ' + m.cast.slice(0, 4).join(', '));
+  document.getElementById('hc-people').textContent = people.join(' · ');
+
+  // Position card near the thumbnail
+  const rect = anchorEl.getBoundingClientRect();
+  let top = rect.top;
+  let left = rect.right + 8;
+
+  // Keep card on screen
+  const cardW = hoverCardEnlarged ? 620 : 420;
+  const cardH = hoverCardEnlarged ? 460 : 320;
+  if (left + cardW > window.innerWidth) left = rect.left - cardW - 8;
+  if (top + cardH > window.innerHeight) top = window.innerHeight - cardH - 10;
+  if (top < 10) top = 10;
+
+  card.style.top = top + 'px';
+  card.style.left = left + 'px';
+  card.classList.toggle('enlarged', hoverCardEnlarged);
+  card.classList.add('visible');
+}
+
+function hideHoverCard() {
+  const card = document.getElementById('hover-card');
+  card.classList.remove('visible');
+  hoverCardEnlarged = false;
+  card.classList.remove('enlarged');
+}
+
 // --- EVENT HANDLERS ---
 function initEvents() {
-  // Sort on header click
-  document.querySelectorAll('thead th').forEach(th => {
+  // Sort on header click (skip non-sortable columns)
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
       if (sortCol === col) {
@@ -604,14 +850,68 @@ function initEvents() {
     });
   });
 
-  // Expand/collapse on row click
+  // Expand/collapse on row click (but not on thumbnail)
   document.getElementById('tbody').addEventListener('click', (e) => {
+    if (e.target.closest('.thumb-cell')) return;
     const row = e.target.closest('tr');
     if (!row || row.classList.contains('detail-row')) return;
     const id = row.dataset.id;
     if (!id) return;
     expandedId = expandedId === id ? null : id;
     renderTable();
+  });
+
+  // Hover card on thumbnail — desktop: mouseenter/leave
+  const tbody = document.getElementById('tbody');
+  let hoverTimeout;
+  tbody.addEventListener('mouseenter', (e) => {
+    const thumb = e.target.closest('.thumb-cell');
+    if (!thumb) return;
+    const row = thumb.closest('tr');
+    const id = row && row.dataset.id;
+    if (!id) return;
+    clearTimeout(hoverTimeout);
+    hoverTimeout = setTimeout(() => showHoverCard(id, thumb), 200);
+  }, true);
+
+  tbody.addEventListener('mouseleave', (e) => {
+    const thumb = e.target.closest('.thumb-cell');
+    if (!thumb) return;
+    clearTimeout(hoverTimeout);
+    // Delay hide to allow moving to the card
+    setTimeout(() => {
+      const card = document.getElementById('hover-card');
+      if (!card.matches(':hover')) hideHoverCard();
+    }, 150);
+  }, true);
+
+  // Keep card visible while hovering over it
+  const hoverCard = document.getElementById('hover-card');
+  hoverCard.addEventListener('mouseleave', hideHoverCard);
+
+  // Mobile: tap on thumbnail toggles card
+  tbody.addEventListener('touchstart', (e) => {
+    const thumb = e.target.closest('.thumb-cell');
+    if (!thumb) { hideHoverCard(); return; }
+    e.preventDefault();
+    const row = thumb.closest('tr');
+    const id = row && row.dataset.id;
+    if (!id) return;
+    const card = document.getElementById('hover-card');
+    if (card.classList.contains('visible') && card.dataset.movieId === id) {
+      hideHoverCard();
+    } else {
+      card.dataset.movieId = id;
+      showHoverCard(id, thumb);
+    }
+  }, { passive: false });
+
+  // Enlarge button
+  document.getElementById('hc-enlarge').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const card = document.getElementById('hover-card');
+    hoverCardEnlarged = !hoverCardEnlarged;
+    card.classList.toggle('enlarged', hoverCardEnlarged);
   });
 
   // Filter inputs
@@ -625,9 +925,10 @@ function initEvents() {
     el.addEventListener('change', renderTable);
   });
 
-  // Keyboard shortcut: Escape clears filters
+  // Keyboard shortcut: Escape clears filters / hides hover card
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      hideHoverCard();
       document.getElementById('f-search').value = '';
       document.getElementById('f-genre').value = '';
       document.getElementById('f-year-min').value = '';
@@ -648,13 +949,15 @@ function initEvents() {
 // --- INIT ---
 async function init() {
   try {
-    allMovies = await fetchMovies();
+    const [movies, syn] = await Promise.all([fetchMovies(), fetchSynopses()]);
+    allMovies = movies;
+    synopses = syn;
     populateGenres();
     initEvents();
     renderTable();
   } catch (err) {
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="10" class="status-msg error">Failed to load: ${escapeHtml(err.message)}</td></tr>`;
+      `<tr><td colspan="11" class="status-msg error">Failed to load: ${escapeHtml(err.message)}</td></tr>`;
     document.getElementById('stats').textContent = 'Error';
     console.error('JTX init error:', err);
   }

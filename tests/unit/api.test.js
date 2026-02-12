@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMovie, formatSize, ratingClass } from '../../src/jtx-core.js';
+import { parseMovie, formatSize, ratingClass, thumbnailUrl, rtLabel } from '../../src/jtx-core.js';
 import mockData from '../../mocks/jellyfin-response.json';
 
 describe('parseMovie', () => {
@@ -168,5 +168,64 @@ describe('ratingClass', () => {
   it('returns low for below 5.5', () => {
     expect(ratingClass(3.6)).toBe('rating-low');
     expect(ratingClass(0)).toBe('rating-low');
+  });
+});
+
+describe('thumbnailUrl', () => {
+  it('generates a valid Jellyfin image URL', () => {
+    const url = thumbnailUrl('abc123', 60, 'http://example.com:8096', 'mykey');
+    expect(url).toBe('http://example.com:8096/Items/abc123/Images/Primary?maxHeight=60&quality=80&api_key=mykey');
+  });
+
+  it('uses default height of 40', () => {
+    const url = thumbnailUrl('abc123', undefined, 'http://example.com:8096', 'mykey');
+    expect(url).toContain('maxHeight=40');
+  });
+
+  it('returns empty string for null id', () => {
+    expect(thumbnailUrl(null)).toBe('');
+    expect(thumbnailUrl('')).toBe('');
+    expect(thumbnailUrl(undefined)).toBe('');
+  });
+});
+
+describe('rtLabel', () => {
+  it('returns Fresh for 60+', () => {
+    expect(rtLabel(100)).toBe('100% Fresh');
+    expect(rtLabel(60)).toBe('60% Fresh');
+    expect(rtLabel(88)).toBe('88% Fresh');
+  });
+
+  it('returns Rotten for below 60', () => {
+    expect(rtLabel(25)).toBe('25% Rotten');
+    expect(rtLabel(59)).toBe('59% Rotten');
+  });
+
+  it('returns empty string for null/0', () => {
+    expect(rtLabel(null)).toBe('');
+    expect(rtLabel(0)).toBe('');
+    expect(rtLabel(undefined)).toBe('');
+  });
+
+  it('rounds to nearest integer', () => {
+    expect(rtLabel(88.7)).toBe('89% Fresh');
+    expect(rtLabel(24.3)).toBe('24% Rotten');
+  });
+});
+
+describe('parseMovie — criticRating', () => {
+  it('extracts CriticRating as criticRating', () => {
+    const movie = parseMovie(mockData.Items[0]); // 12 Angry Men, CriticRating: 100
+    expect(movie.criticRating).toBe(100);
+  });
+
+  it('extracts CriticRating for Rotten movie', () => {
+    const movie = parseMovie(mockData.Items[3]); // The Room, CriticRating: 25
+    expect(movie.criticRating).toBe(25);
+  });
+
+  it('defaults to 0 when CriticRating is missing', () => {
+    const movie = parseMovie(mockData.Items[4]); // No Metadata Movie
+    expect(movie.criticRating).toBe(0);
   });
 });

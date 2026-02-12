@@ -1,6 +1,20 @@
 // JTX Core — Extracted logic for testing
 // These functions are used by both index.html and the test suite
 
+const DEFAULT_SERVER = 'http://192.168.1.183:8096';
+const DEFAULT_API_KEY = 'b62806a76e91466fa5964648d545a446';
+
+export function thumbnailUrl(id, height = 40, serverUrl = DEFAULT_SERVER, apiKey = DEFAULT_API_KEY) {
+  if (!id) return '';
+  return `${serverUrl}/Items/${id}/Images/Primary?maxHeight=${height}&quality=80&api_key=${apiKey}`;
+}
+
+export function rtLabel(criticRating) {
+  if (criticRating == null || criticRating === 0) return '';
+  const pct = Math.round(criticRating);
+  return pct >= 60 ? `${pct}% Fresh` : `${pct}% Rotten`;
+}
+
 export function parseMovie(item) {
   const videoStream = (item.MediaStreams || []).find(s => s.Type === 'Video') || {};
   const audioStream = (item.MediaStreams || []).find(s => s.Type === 'Audio') || {};
@@ -35,6 +49,7 @@ export function parseMovie(item) {
     genres: (item.Genres || []),
     genre: (item.Genres || []).join(', ') || '—',
     rating: item.CommunityRating || 0,
+    criticRating: item.CriticRating || 0,
     officialRating: item.OfficialRating || '—',
     runtime: runtimeMin,
     resolution: resolution,
