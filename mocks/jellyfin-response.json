@@ -1,0 +1,111 @@
+{
+  "Items": [
+    {
+      "Name": "12 Angry Men",
+      "Id": "aaa111",
+      "ProductionYear": 1957,
+      "CommunityRating": 9.0,
+      "OfficialRating": "PG",
+      "RunTimeTicks": 57600000000,
+      "Overview": "A jury holdout attempts to prevent a miscarriage of justice.",
+      "Genres": ["Drama"],
+      "People": [
+        {"Name": "Sidney Lumet", "Type": "Director"},
+        {"Name": "Henry Fonda", "Type": "Actor"},
+        {"Name": "Lee J. Cobb", "Type": "Actor"}
+      ],
+      "MediaStreams": [
+        {"Type": "Video", "Codec": "h264", "Width": 1920, "Height": 1080, "BitRate": 2500000},
+        {"Type": "Audio", "Codec": "aac", "Channels": 2, "ChannelLayout": "stereo", "BitRate": 128000}
+      ],
+      "Studios": [{"Name": "Orion-Nova Productions", "Id": "s1"}],
+      "Path": "/media/movies/12.Angry.Men.1957.1080p.mp4",
+      "Container": "mp4"
+    },
+    {
+      "Name": "A Bronx Tale",
+      "Id": "bbb222",
+      "ProductionYear": 1993,
+      "CommunityRating": 7.8,
+      "OfficialRating": "R",
+      "RunTimeTicks": 72600000000,
+      "Overview": "A father becomes worried when a local gangster befriends his son.",
+      "Genres": ["Crime", "Drama"],
+      "People": [
+        {"Name": "Robert De Niro", "Type": "Director"},
+        {"Name": "Robert De Niro", "Type": "Actor"},
+        {"Name": "Chazz Palminteri", "Type": "Actor"},
+        {"Name": "Lillo Brancato", "Type": "Actor"}
+      ],
+      "MediaStreams": [
+        {"Type": "Video", "Codec": "h264", "Width": 1920, "Height": 1080, "BitRate": 3000000},
+        {"Type": "Audio", "Codec": "ac3", "Channels": 6, "ChannelLayout": "5.1", "BitRate": 384000}
+      ],
+      "Studios": [{"Name": "Savoy Pictures", "Id": "s2"}],
+      "Path": "/media/movies/A.Bronx.Tale.1993.1080p.mkv",
+      "Container": "mkv"
+    },
+    {
+      "Name": "Blade Runner 2049",
+      "Id": "ccc333",
+      "ProductionYear": 2017,
+      "CommunityRating": 8.0,
+      "OfficialRating": "R",
+      "RunTimeTicks": 99000000000,
+      "Overview": "A young blade runner discovers a long-buried secret.",
+      "Genres": ["Science Fiction", "Drama"],
+      "People": [
+        {"Name": "Denis Villeneuve", "Type": "Director"},
+        {"Name": "Ryan Gosling", "Type": "Actor"},
+        {"Name": "Harrison Ford", "Type": "Actor"},
+        {"Name": "Ana de Armas", "Type": "Actor"}
+      ],
+      "MediaStreams": [
+        {"Type": "Video", "Codec": "hevc", "Width": 3840, "Height": 2160, "BitRate": 15000000},
+        {"Type": "Audio", "Codec": "truehd", "Channels": 8, "ChannelLayout": "7.1", "BitRate": 5000000}
+      ],
+      "Studios": [{"Name": "Warner Bros.", "Id": "s3"}],
+      "Path": "/media/movies/Blade.Runner.2049.2017.4K.mkv",
+      "Container": "mkv"
+    },
+    {
+      "Name": "The Room",
+      "Id": "ddd444",
+      "ProductionYear": 2003,
+      "CommunityRating": 3.6,
+      "OfficialRating": "R",
+      "RunTimeTicks": 59400000000,
+      "Overview": "Johnny is a successful banker who lives happily in a San Francisco townhouse.",
+      "Genres": ["Drama"],
+      "People": [
+        {"Name": "Tommy Wiseau", "Type": "Director"},
+        {"Name": "Tommy Wiseau", "Type": "Actor"},
+        {"Name": "Greg Sestero", "Type": "Actor"}
+      ],
+      "MediaStreams": [
+        {"Type": "Video", "Codec": "mpeg4", "Width": 640, "Height": 480, "BitRate": 800000},
+        {"Type": "Audio", "Codec": "mp3", "Channels": 2, "ChannelLayout": "stereo", "BitRate": 128000}
+      ],
+      "Studios": [{"Name": "Wiseau Films", "Id": "s4"}],
+      "Path": "/media/movies/The.Room.2003.DVDRip.avi",
+      "Container": "avi"
+    },
+    {
+      "Name": "No Metadata Movie",
+      "Id": "eee555",
+      "ProductionYear": null,
+      "CommunityRating": null,
+      "OfficialRating": null,
+      "RunTimeTicks": null,
+      "Overview": null,
+      "Genres": [],
+      "People": [],
+      "MediaStreams": [],
+      "Studios": [],
+      "Path": "/media/movies/random_file.mp4",
+      "Container": "mp4"
+    }
+  ],
+  "TotalRecordCount": 5,
+  "StartIndex": 0
+}

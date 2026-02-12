@@ -1,0 +1,19 @@
+{
+  "name": "jellyfin-text-ui",
+  "version": "0.1.0",
+  "description": "Lightweight text-based movie browser for Jellyfin",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve src/ -p 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test",
+    "deploy": "echo 'Deploy script - copies src/index.html to NAS nginx'"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "jsdom": "^26.0.0"
+  },
+  "license": "MIT"
+}
